@@ -201,35 +201,34 @@ def page_display_table():
     tabs = st.tabs(["20"+i[1:-1] for i in result['years']][::-1])
     for tab, year in zip(tabs, reversed(result['years'])):
         with tab:
-
-            df = pd.DataFrame(
-                transform_data(result, "CS", year),
-            )
-            # if year == f"'{latest_year}'":
-
-            #     pie_df = df.drop(
-            #         columns=['Register Number', 'SGPA'])
-            #     transformed_pie_df = pie_df.groupby(
-            #         'Full pass').count().reset_index()
-            #     transformed_pie_df = transformed_pie_df.drop(0, axis=0)
-            #     print(transformed_pie_df)
-            #     fig = px.pie(transformed_pie_df.transpose().drop(
-            #         'Full pass', axis=0),
-            #         values='Full pass', names=1,)
-            #     st.plotly_chart(fig, use_container_width=True)
-            st.download_button(
-                "Export CSV",
-                convert_df(df),
-                "file.csv",
-                "text/csv",
-                use_container_width=True,
-                key='download-csv'+year
-            )
-            st.dataframe(
-                df,
-                hide_index=True,
-                use_container_width=True,
-            )
+            branch_tabs = st.tabs(branches)
+            for branch_tab, branch in zip(branch_tabs, branches):
+                try:
+                    with branch_tab:
+                        df = pd.DataFrame(
+                            transform_data(result, branch, year),
+                        )
+                        if year == f"'{latest_year}'":
+                            pie_df = df.groupby('Full pass')[
+                                'Register Number'].nunique()
+                            fig = px.pie(
+                                pie_df, values="Register Number", names="Register Number", title="Full pass percentage")
+                            st.plotly_chart(fig, use_container_width=True)
+                        st.download_button(
+                            "Export CSV",
+                            convert_df(df),
+                            "file.csv",
+                            "text/csv",
+                            use_container_width=True,
+                            key='download-csv'+year+branch
+                        )
+                        st.dataframe(
+                            df,
+                            hide_index=True,
+                            use_container_width=True,
+                        )
+                except KeyError:
+                    pass
     st.divider()
     st.caption("The following are the subjects and their credit points")
     st.table(
