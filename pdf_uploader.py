@@ -5,6 +5,7 @@ from collections import defaultdict
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
+import plotly.express as px
 import PyPDF2
 import streamlit as st
 from pdf_parser import parse_pdf
@@ -117,7 +118,7 @@ def page_result():
     latest_year = max(years)
     st.info(f"Choosing year 20{latest_year} to source subjects")
     st.session_state.branches = st.multiselect(
-        "Choose the branches you want to include in the result:", branches)
+        "Choose the branches you want to include in the result:", branches, default=st.session_state.branches if "branches" in st.session_state else [])
     if len(st.session_state.branches) == 0:
         st.error("Please select at least one branch")
         st.stop()
@@ -145,20 +146,41 @@ def convert_df(df):
 
 def page_display_table():
     st.header("Result")
+
     result = st.session_state.result
     branches = st.session_state.branches
     st.session_state.gpi = {
         'S': 10,
+        'A+': 9,
+        'A': 8.5,
+        'B+': 8,
+        'B': 7.5,
+        'C+': 7,
+        'C': 6.5,
+        'D': 6,
+        'P': 5,
+        'F': 0,
     }
+    latest_year = max([int(i[1:-1]) for i in result['years']])
 
     def calculate_sgpa(student):
-        total_credits = 0
-        total_points = 0
+        sgpa = 0.0
+        credits = 0
         for subject in student['subjects']:
-            total_credits += st.session_state.scp[subject]
-            total_points += st.session_state.scp[subject] * \
-                student['subjects'][subject]
-        return total_points / total_credits
+            if student['subjects'][subject] == 'Withheld' or student['subjects'][subject] == 'TBP' or student['subjects'][subject] == 'Absent':
+                return 0.0
+            cpi = st.session_state.scp[subject]
+            try:
+                gpi = st.session_state.gpi[student['subjects'][subject]]
+            except KeyError:
+                gpi = 0
+            sgpa += cpi * gpi
+            credits += cpi
+        try:
+            sgpa /= credits
+        except ZeroDivisionError:
+            sgpa = 0.0
+        return sgpa
 
     def transform_data(result, branch, year):
         data = []
@@ -167,25 +189,58 @@ def page_display_table():
             student_data['Register Number'] = student['register_number']
             for subject in student['subjects']:
                 student_data[subject] = student['subjects'][subject]
-            # student_data['SGPA'] = calculate_sgpa(student)
+            if year == f"'{latest_year}'":
+                student_data['SGPA'] = calculate_sgpa(student)
+                student_data['Full pass'] = not any([True if student['subjects'][subject] in [
+                    'F', 'Withheld', 'Absent', 'TBP'] else False for subject in student['subjects']])
             data.append(student_data)
         return data
 
-    df = pd.DataFrame(
-        transform_data(result, "CS", "'21'"),
+    def go_back():
+        st.session_state.page_index -= 1
+    tabs = st.tabs(["20"+i[1:-1] for i in result['years']][::-1])
+    for tab, year in zip(tabs, reversed(result['years'])):
+        with tab:
+
+            df = pd.DataFrame(
+                transform_data(result, "CS", year),
+            )
+            # if year == f"'{latest_year}'":
+
+            #     pie_df = df.drop(
+            #         columns=['Register Number', 'SGPA'])
+            #     transformed_pie_df = pie_df.groupby(
+            #         'Full pass').count().reset_index()
+            #     transformed_pie_df = transformed_pie_df.drop(0, axis=0)
+            #     print(transformed_pie_df)
+            #     fig = px.pie(transformed_pie_df.transpose().drop(
+            #         'Full pass', axis=0),
+            #         values='Full pass', names=1,)
+            #     st.plotly_chart(fig, use_container_width=True)
+            st.download_button(
+                "Export CSV",
+                convert_df(df),
+                "file.csv",
+                "text/csv",
+                use_container_width=True,
+                key='download-csv'+year
+            )
+            st.dataframe(
+                df,
+                hide_index=True,
+                use_container_width=True,
+            )
+    st.divider()
+    st.caption("The following are the subjects and their credit points")
+    st.table(
+        pd.DataFrame(
+            [(subject, result['subjects'][subject], st.session_state.scp[subject])
+             for subject in st.session_state.scp],
+            columns=['Code', 'Name', 'Credit Points']
+        )
     )
-    st.download_button(
-        "Press to Download",
-        convert_df(df),
-        "file.csv",
-        "text/csv",
-        key='download-csv'
-    )
-    st.dataframe(
-        df,
-        hide_index=True,
-        use_container_width=True,
-    )
+    st.button("Go back", key="back",
+              use_container_width=True, on_click=go_back)
 
 
 # Initialize app state
