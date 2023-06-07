@@ -1,0 +1,2 @@
+pdf_parser @ git+https://github.com/0x006e/pdf_parser.git@main
+pandas

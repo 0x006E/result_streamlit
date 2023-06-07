@@ -1,7 +1,6 @@
 import base64
 import logging
 import os
-import random
 from collections import defaultdict
 from tempfile import NamedTemporaryFile
 
@@ -162,11 +161,14 @@ def page_display_table():
         return total_points / total_credits
 
     def transform_data(result, branch, year):
-        data = defaultdict(lambda: [])
+        data = []
         for student in result['years'][year]['branches'][branch]['students']:
-            data['Register Number'].append(student['register_number'])
+            student_data = {}
+            student_data['Register Number'] = student['register_number']
             for subject in student['subjects']:
-                data[subject].append(student['subjects'][subject])
+                student_data[subject] = student['subjects'][subject]
+            # student_data['SGPA'] = calculate_sgpa(student)
+            data.append(student_data)
         return data
 
     df = pd.DataFrame(
