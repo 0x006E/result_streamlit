@@ -3,12 +3,16 @@ import logging
 import os
 from collections import defaultdict
 from tempfile import NamedTemporaryFile
+from utils.generate_df_filter import generate_dataframe_filter, DataFrameFilterException
 
 import pandas as pd
 import plotly.express as px
 import PyPDF2
 import streamlit as st
 from pdf_parser import parse_pdf
+import re
+
+st.set_page_config(layout="wide")
 
 
 class log_viewer(logging.Handler):
@@ -167,7 +171,7 @@ def page_display_table():
         sgpa = 0.0
         credits = 0
         for subject in student['subjects']:
-            if student['subjects'][subject] == 'Withheld' or student['subjects'][subject] == 'TBP' or student['subjects'][subject] == 'Absent':
+            if student['subjects'][subject] == 'Withheld' or student['subjects'][subject] == 'TBP':
                 return 0.0
             cpi = st.session_state.scp[subject]
             try:
@@ -187,12 +191,13 @@ def page_display_table():
         for student in result['years'][year]['branches'][branch]['students']:
             student_data = {}
             student_data['Register Number'] = student['register_number']
+            student_data['register_info_serial'] = student['register_info']['serial']
             for subject in student['subjects']:
                 student_data[subject] = student['subjects'][subject]
             if year == f"'{latest_year}'":
                 student_data['SGPA'] = calculate_sgpa(student)
                 student_data['Full pass'] = not any([True if student['subjects'][subject] in [
-                    'F', 'Withheld', 'Absent', 'TBP'] else False for subject in student['subjects']])
+                    'FE', 'F', 'Withheld', 'Absent', 'TBP'] else False for subject in student['subjects']])
             data.append(student_data)
         return data
 
@@ -205,28 +210,42 @@ def page_display_table():
             for branch_tab, branch in zip(branch_tabs, branches):
                 try:
                     with branch_tab:
+                        transformed_data = transform_data(result, branch, year)
                         df = pd.DataFrame(
-                            transform_data(result, branch, year),
-                        )
+                            data=transformed_data).set_index("Register Number")
+                        input = st.text_input(
+                            label="Filter criteria", key=year+branch)
+                        try:
+                            filter = generate_dataframe_filter(
+                                input, field_name="register_info_serial")
+                            if filter is None:
+                                filtered_df = df
+                            else:
+                                filtered_df = df.query(
+                                    filter)
+                        except DataFrameFilterException as e:
+                            st.error(str(e))
+                            filtered_df = df
                         if year == f"'{latest_year}'":
-                            pie_df = df.groupby('Full pass')[
-                                'Register Number'].nunique()
+                            pie_df = filtered_df.groupby('Full pass').nunique()
                             fig = px.pie(
-                                pie_df, values="Register Number", names="Register Number", title="Full pass percentage")
+                                pie_df, values="register_info_serial", names="register_info_serial", title="Full pass percentage")
                             st.plotly_chart(fig, use_container_width=True)
+                        filtered_df = filtered_df.sort_values('register_info_serial').drop(
+                            ["register_info_serial"], axis=1).reset_index()
                         st.download_button(
                             "Export CSV",
-                            convert_df(df),
+                            convert_df(filtered_df),
                             "file.csv",
                             "text/csv",
                             use_container_width=True,
                             key='download-csv'+year+branch
                         )
                         st.dataframe(
-                            df,
-                            hide_index=True,
+                            filtered_df,
                             use_container_width=True,
                         )
+
                 except KeyError:
                     pass
     st.divider()
