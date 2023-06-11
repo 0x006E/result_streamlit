@@ -228,8 +228,9 @@ def page_display_table():
                             filtered_df = df
                         if year == f"'{latest_year}'":
                             pie_df = filtered_df.groupby('Full pass').nunique()
+                            pie_df.insert(0, 'Status', ['Failed', 'Passed'])
                             fig = px.pie(
-                                pie_df, values="register_info_serial", names="register_info_serial", title="Full pass percentage")
+                                pie_df, values="register_info_serial", names="Status", title="Full pass percentage")
                             st.plotly_chart(fig, use_container_width=True)
                         filtered_df = filtered_df.sort_values('register_info_serial').drop(
                             ["register_info_serial"], axis=1).reset_index()
