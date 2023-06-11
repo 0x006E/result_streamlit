@@ -236,7 +236,7 @@ def page_display_table():
                         df = pd.DataFrame(
                             data=transformed_data, index=[d['Register Number'] for d in transformed_data])
                         input = st.text_input(
-                            label="Filter criteria", key=year+branch)
+                            label="Filter criteria", key=year+branch, help="Eg: 30,62..118 includes 30, the numbers from 62 to 118 both inclusive", placeholder="Eg: 30,62..118")
                         try:
                             filter = generate_dataframe_filter(
                                 input, field_name="register_info_serial")
@@ -274,6 +274,7 @@ def page_display_table():
                         )
                         st.dataframe(
                             filtered_df,
+                            hide_index=True,
                             use_container_width=True,
                         )
 
