@@ -133,7 +133,7 @@ def page_result():
     years = [int(i[1:-1]) for i in result['years'].keys()]
     latest_year = max(years)
     st.info(f"Choosing year 20{latest_year} to source subjects")
-    if "branches" in st.session_state:
+    if "branches" not in st.session_state:
         st.session_state.branches = []
     st.session_state.branches = st.multiselect(
         "Choose the branches you want to include in the result:", branches, default=st.session_state.branches)
