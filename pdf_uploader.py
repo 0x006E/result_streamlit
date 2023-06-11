@@ -234,7 +234,7 @@ def page_display_table():
                     with branch_tab:
                         transformed_data = transform_data(result, branch, year)
                         df = pd.DataFrame(
-                            data=transformed_data, index=[d['Register Number'] for d in transformed_data])
+                            data=transformed_data)
                         input = st.text_input(
                             label="Filter criteria", key=year+branch, help="Eg: 30,62..118 includes 30, the numbers from 62 to 118 both inclusive", placeholder="Eg: 30,62..118")
                         try:
