@@ -109,11 +109,23 @@ def process_page():
 
 
 def page_result():
+    def go_back():
+        st.session_state.page_index = 0
+        st.session_state.uploaded_file = None
+
+    def on_submit():
+        st.session_state.scp = subject_state
+        go_next()
+
     st.title("We have some questions for you...")
     if "result" not in st.session_state:
         st.error("No result available yet.")
         st.stop()
     result = st.session_state.result
+    if result == {}:
+        st.error("This PDF does not seem to contain any result data")
+        st.button("Go back", on_click=go_back)
+        st.stop()
     st.write("We found these batches in the PDF file:")
     st.markdown('\n'.join(f"- {'20' + i[1:-1]}" for i in result['years']))
     branches = list(set([a for i in result['years']
@@ -121,8 +133,10 @@ def page_result():
     years = [int(i[1:-1]) for i in result['years'].keys()]
     latest_year = max(years)
     st.info(f"Choosing year 20{latest_year} to source subjects")
+    if "branches" in st.session_state:
+        st.session_state.branches = []
     st.session_state.branches = st.multiselect(
-        "Choose the branches you want to include in the result:", branches, default=st.session_state.branches if "branches" in st.session_state else [])
+        "Choose the branches you want to include in the result:", branches, default=st.session_state.branches)
     if len(st.session_state.branches) == 0:
         st.error("Please select at least one branch")
         st.stop()
@@ -132,16 +146,23 @@ def page_result():
         st.session_state.scp = defaultdict(lambda: 0)
     subjects = []
     for branch in st.session_state.branches:
-        subjects += result['years'][f"'{latest_year}'"]['branches'][branch]['students'][0]['subjects'].keys()
+        try:
+            subjects += result['years'][f"'{latest_year}'"]['branches'][branch]['students'][0]['subjects'].keys()
+        except:
+            pass
     st.info(
         "If the credit point is not changed from default value, it will cause incorrect GPA calculation")
     subjects = list(set(subjects))
-    for subject in subjects:
-        st.session_state.scp[subject] = st.number_input(
-            f"Credit points for {subject } - {result['subjects'][subject]}", min_value=0, max_value=10, value=st.session_state.scp[subject], step=1, key=subject)
+    with st.form("credit_points"):
+        subject_state = defaultdict(lambda: 0)
+        if subjects == []:
+            st.warning(
+                "Subject list seems to be empty, GPA Calculation not possible ")
+        for subject in subjects:
+            subject_state[subject] = int(st.number_input(
+                f"Credit points for {subject } - {result['subjects'][subject]}", min_value=0, max_value=10, value=st.session_state.scp[subject], step=1, key=subject))
 
-    st.button("View results", key="view",
-              use_container_width=True, on_click=go_next)
+        st.form_submit_button("View results", on_click=on_submit)
 
 
 def convert_df(df):
@@ -191,7 +212,8 @@ def page_display_table():
         for student in result['years'][year]['branches'][branch]['students']:
             student_data = {}
             student_data['Register Number'] = student['register_number']
-            student_data['register_info_serial'] = student['register_info']['serial']
+            student_data['register_info_serial'] = int(
+                student['register_info']['serial'])
             for subject in student['subjects']:
                 student_data[subject] = student['subjects'][subject]
             if year == f"'{latest_year}'":
@@ -212,7 +234,7 @@ def page_display_table():
                     with branch_tab:
                         transformed_data = transform_data(result, branch, year)
                         df = pd.DataFrame(
-                            data=transformed_data).set_index("Register Number")
+                            data=transformed_data, index=[d['Register Number'] for d in transformed_data])
                         input = st.text_input(
                             label="Filter criteria", key=year+branch)
                         try:
@@ -228,7 +250,15 @@ def page_display_table():
                             filtered_df = df
                         if year == f"'{latest_year}'":
                             pie_df = filtered_df.groupby('Full pass').nunique()
-                            pie_df.insert(0, 'Status', ['Failed', 'Passed'])
+                            length = len(pie_df.index)
+                            if length > 1:
+                                values = ['Failed', 'Passed']
+                            else:
+                                if df["Full pass"][0]:
+                                    values = ["Passed"]
+                                else:
+                                    values = ['Failed']
+                            pie_df.insert(0, 'Status', values)
                             fig = px.pie(
                                 pie_df, values="register_info_serial", names="Status", title="Full pass percentage")
                             st.plotly_chart(fig, use_container_width=True)
