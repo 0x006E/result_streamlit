@@ -274,7 +274,6 @@ def page_display_table():
                         )
                         st.dataframe(
                             filtered_df,
-                            hide_index=True,
                             use_container_width=True,
                         )
 
