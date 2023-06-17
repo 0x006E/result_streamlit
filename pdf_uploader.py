@@ -4,10 +4,9 @@ import os
 from collections import defaultdict
 from tempfile import NamedTemporaryFile
 from utils.generate_df_filter import generate_dataframe_filter, DataFrameFilterException
-
+from pypdf import PdfReader
 import pandas as pd
 import plotly.express as px
-import PyPDF2
 import streamlit as st
 from pdf_parser import parse_pdf
 import re
@@ -69,8 +68,8 @@ def page_display():
 
     # Extract text from the uploaded \PDF file
     uploaded_file = st.session_state.uploaded_file
-    pdf_reader = PyPDF2.PdfFileReader(st.session_state.uploaded_file)
-    num_pages = pdf_reader.numPages
+    reader = PdfReader(st.session_state.uploaded_file)
+    num_pages = len(reader.pages)
     st.write(f"The PDF contains {num_pages} pages.")
 
     # Convert the PDF to bytes
