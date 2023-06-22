@@ -12,14 +12,15 @@ import streamlit as st
 from pdf_parser import parse_pdf
 import re
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="centered")
 
 
 class log_viewer(logging.Handler):
     """ Class to redistribute python logging data """
 
     # have a class member to store the existing logger
-    logger_instance = logging.getLogger("pdf_parser")
+    logger_instance = logging.getLogger("camelot")
+    logger = logging.getLogger("pdf_parser")
     st_instance = st.empty()
 
     def __init__(self, st_instance=None, *args, **kwargs):
@@ -28,13 +29,11 @@ class log_viewer(logging.Handler):
         st_instance = st_instance or st.empty()
 
         self.logger_instance.addHandler(self)
+        self.logger.addHandler(self)
 
     def emit(self, record):
         """ Overload of logging.Handler method """
-
-        record = self.format(record)
         self.st_instance.write(record)
-        print(record)
 
 
 def go_next():
@@ -72,6 +71,10 @@ def page_display():
     pdf_reader = PyPDF2.PdfFileReader(st.session_state.uploaded_file)
     num_pages = pdf_reader.numPages
     st.write(f"The PDF contains {num_pages} pages.")
+    st.session_state.start_page = st.number_input(
+        "Start page", min_value=1, max_value=num_pages, step=1)
+    st.session_state.end_page = st.number_input(
+        "End page", min_value=1, value=num_pages,  max_value=num_pages, step=1)
 
     # Convert the PDF to bytes
     pdf_bytes = uploaded_file.getvalue()
@@ -93,15 +96,15 @@ def page_display():
 def process_page():
     st.title("Processing the Uploaded PDF File")
     code_block = st.empty()
-
+    start_page = st.session_state.start_page
+    end_page = st.session_state.end_page
     with st.spinner("Processing the uploaded PDF file..."):
         temp = NamedTemporaryFile(suffix=".pdf", delete=False)
         temp.write(st.session_state.uploaded_file.getvalue())
         log_viewer(st_instance=code_block)
-        logfile = NamedTemporaryFile(suffix=".log", delete=False)
-        st.session_state.result = parse_pdf(temp.name, logfile.name)
+        st.session_state.result = parse_pdf(
+            temp.name, pages=f"{start_page}-{end_page}")
         temp.close()
-        logfile.close()
         os.remove(temp.name)
     st.success("Processing complete!")
     next_btn = st.button(
@@ -170,6 +173,7 @@ def convert_df(df):
 
 
 def page_display_table():
+
     st.header("Result")
 
     result = st.session_state.result
