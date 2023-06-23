@@ -10,9 +10,9 @@ import plotly.express as px
 import streamlit as st
 from pdf_parser import parse_pdf
 from docxtpl import DocxTemplate
-import re
 import numpy as np
-from transpose_dict import TD
+import io
+
 st.set_page_config(layout="centered")
 
 
@@ -110,7 +110,7 @@ def process_page():
         temp.write(st.session_state.uploaded_file.getvalue())
         log_viewer(st_instance=code_block)
         st.session_state.result = parse_pdf(
-            temp.name, pages=f"{start_page}-{end_page}")
+            temp.name, pages=f"{start_page}-{end_page}", final_data={})
         temp.close()
         os.remove(temp.name)
     st.success("Processing complete!")
@@ -196,7 +196,8 @@ def page_display_table():
         'P': 5,
         'F': 0,
     }
-    latest_year = max([int(i[1:-1]) for i in result['years']])
+    st.session_state.latest_year = max([int(i[1:-1]) for i in result['years']])
+    latest_year = st.session_state.latest_year
 
     def calculate_sgpa(student):
         sgpa = 0.0
@@ -317,12 +318,16 @@ def page_display_table():
 def template_generation(context):
     doc = DocxTemplate("template.docx")
     doc.render(context)
-    doc.save("generated_doc.docx")
+    file_stream = io.BytesIO()
+    doc.save(file_stream)
+    file_stream.seek(0)
+    return file_stream
 
 
 def report_generation():
     def go_back():
         st.session_state.page_index -= 1
+        st.session_state.filtered_df = None
     st.title("Report Generation")
     if "filtered_df" not in st.session_state:
         st.error("No view selected")
@@ -331,8 +336,9 @@ def report_generation():
     df: pd.DataFrame = st.session_state.filtered_df
     result = st.session_state.result
     col1, col2 = st.columns(2)
-    dept = col1.text_input(label="Department name", )
-    year = col2.text_input(label="Year of admission")
+    dept = col1.text_input(label="Department name")
+    year = col2.number_input(label="Year of admission",
+                             value=2000+st.session_state.latest_year)
     staffadvisor1 = col1.text_input(label="Staff Advisor 1")
     staffadvisor2 = col2.text_input(label="Staff Advisor 2")
     semester = col1.text_input(label="Semester")
@@ -340,17 +346,18 @@ def report_generation():
     st.divider()
     col1, col2 = st.columns(2)
     witheld = col1.number_input(
-        label="No. of students whose results are withheld")
+        label="No. of students whose results are withheld", min_value=0, step=1, value=(df == 'Withheld').any(axis=1).sum())
     appearedinall = col2.number_input(
-        label="No. of students appeared in all subjects")
+        label="No. of students appeared in all subjects", min_value=0, step=1, value=(~df.isin(['Absent'])).all(axis=1).sum())
     num_result_published = col1.number_input(
-        label="No. of students whose results published")
+        label="No. of students whose results published", min_value=0, step=1, value=(~df.isin(['Withheld', 'TBP'])).all(axis=1).sum())
     fullpass = col2.number_input(
-        label="No. of students passed in all subjects")
+        label="No. of students passed in all subjects", min_value=0, step=1, value=df['Full pass'].value_counts()[1])
     fullpass_percentage = st.number_input(label="Pass percentage")
     st.divider()
     staff_details = st.file_uploader(
         "Staff details", type="csv", key="upload")
+    docx = ""
     if staff_details is None:
         st.error("Upload staff details")
     else:
@@ -402,6 +409,8 @@ def report_generation():
         }
         editable_df = pd.DataFrame(subject_arr).set_index("id")
         renamed_df = editable_df.rename(index=str, columns=column_headers_dict)
+        st.write(
+            "Below table is editable and may be edited to change incorrect values")
         editable_df = st.data_editor(renamed_df).rename(
             index=str, columns=invert_dict(column_headers_dict))
         context = {
@@ -418,9 +427,11 @@ def report_generation():
             'fullpass_percentage': fullpass_percentage,
             'subjects': subject_arr,
         }
+        docx = template_generation(context)
+
     col1, col2 = st.columns(2)
-    col1.button("Generate", on_click=lambda: template_generation(context),
-                disabled=staff_details is None, use_container_width=True)
+    col1.download_button("Generate", file_name=dept+str(year), data=docx,
+                         disabled=staff_details is None, use_container_width=True)
     col2.button("Go back", on_click=go_back, use_container_width=True)
 
 
