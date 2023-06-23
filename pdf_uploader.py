@@ -430,7 +430,7 @@ def report_generation():
         docx = template_generation(context)
 
     col1, col2 = st.columns(2)
-    col1.download_button("Generate", file_name=dept+str(year), data=docx,
+    col1.download_button("Generate", file_name=dept+str(year)+'.docx', data=docx,
                          disabled=staff_details is None, use_container_width=True)
     col2.button("Go back", on_click=go_back, use_container_width=True)
 
