@@ -368,9 +368,9 @@ def report_generation():
         subject_arr = []
         passed_grades = ['S', "A+", "A", "B+", "B", "C", "C+", "D", "P"]
         for index, subject in enumerate(subjects):
-            pass_with_fe = df[subject].value_counts(
-            )[passed_grades.extend(["FE", "Absent"])].sum()
+            pass_with_fe = df[subject].value_counts()[passed_grades.extend(["FE", "Absent"])].sum()
             pass_without_fe = df[subject].value_counts()[passed_grades].sum()
+            
             sub = {
                 'id': index,
                 'code': f"{subject} - {result['subjects'][subject]}",
@@ -378,7 +378,7 @@ def report_generation():
                 'num_reg': len(df.index),
                 'num_result': df[subject].count(),
                 'num_passed': df[subject].value_counts()[1],
-                'num_passwithfe': 0,
+                'num_passwithfe': pass,
                 'num_passwithoutfe': 0
             }
             subject_arr.append(sub)
