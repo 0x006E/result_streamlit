@@ -13,7 +13,7 @@ if __name__ == "__main__":
     streamlit.web.bootstrap.load_config_options(flag_options=flag_options)
     flag_options["_is_running_with_streamlit"] = True
     streamlit.web.bootstrap.run(
-        "./pdf_uploader.py",
+        "./insightify.py",
         "streamlit run",
         [],
         flag_options,

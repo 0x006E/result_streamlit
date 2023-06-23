@@ -393,8 +393,8 @@ def report_generation():
                 'num_reg': len(df.index),
                 'num_result': df[subject].count(),
                 'num_passed': df[subject].value_counts()[1],
-                'num_passwithfe': '{0:.2f}%'.format(100*pass_with_fe/total_without_withheld),
-                'num_passwithoutfe': '{0:.2f}%'.format(100*pass_without_fe/total_without_withheld)
+                'passwithfe': '{0:.2f}%'.format(100*pass_with_fe/total_without_withheld),
+                'passwithoutfe': '{0:.2f}%'.format(100*pass_without_fe/total_without_withheld)
             }
             subject_arr.append(sub)
         column_headers_dict = {
