@@ -358,28 +358,36 @@ def report_generation():
         col1, col2 = st.columns(2)
         subject_code = col1.selectbox(
             "Subject Code", options=staff_details_df.columns)
-        name_col = col2.selectbox(
+        name_col = col1.selectbox(
             "Staff Name", options=staff_details_df.drop(subject_code, axis=1).columns)
-        col1, col2 = st.columns(2)
         subjects = df.columns.values[np.invert(np.in1d(df.columns.values, [
             "Register Number", "Full pass", "SGPA", "register_info_serial"]))]
         staff_details_df.set_index(subject_code, inplace=True)
-        st.write(staff_details_df)
+        col2.write(staff_details_df)
         subject_arr = []
         passed_grades = ['S', "A+", "A", "B+", "B", "C", "C+", "D", "P"]
+
         for index, subject in enumerate(subjects):
-            pass_with_fe = df[subject].value_counts()[passed_grades.extend(["FE", "Absent"])].sum()
-            pass_without_fe = df[subject].value_counts()[passed_grades].sum()
-            
+            grades_with_fe = passed_grades + ["FE", "Absent"]
+            grades_with_f = grades_with_fe + ['F']
+            pass_with_fe = df[subject].isin(passed_grades).sum()
+            pass_without_fe = df[subject].isin(grades_with_fe).sum()
+            total_without_withheld = df[subject].isin(grades_with_f).sum()
+            try:
+                facultyname = staff_details_df.loc[subject][name_col]
+            except KeyError:
+                st.warning(
+                    f"Cannot find faculty name for {subject}. Setting as blank")
+                facultyname = ""
             sub = {
                 'id': index,
                 'code': f"{subject} - {result['subjects'][subject]}",
-                'faculty': staff_details_df.loc[subject][name_col],
+                'faculty': facultyname,
                 'num_reg': len(df.index),
                 'num_result': df[subject].count(),
                 'num_passed': df[subject].value_counts()[1],
-                'num_passwithfe': pass,
-                'num_passwithoutfe': 0
+                'num_passwithfe': '{0:.2f}%'.format(100*pass_with_fe/total_without_withheld),
+                'num_passwithoutfe': '{0:.2f}%'.format(100*pass_without_fe/total_without_withheld)
             }
             subject_arr.append(sub)
         column_headers_dict = {
@@ -396,7 +404,6 @@ def report_generation():
         renamed_df = editable_df.rename(index=str, columns=column_headers_dict)
         editable_df = st.data_editor(renamed_df).rename(
             index=str, columns=invert_dict(column_headers_dict))
-        print(editable_df.to_dict(orient="records"))
         context = {
             'dept': dept,
             'year': year,
@@ -411,6 +418,7 @@ def report_generation():
             'fullpass_percentage': fullpass_percentage,
             'subjects': subject_arr,
         }
+    col1, col2 = st.columns(2)
     col1.button("Generate", on_click=lambda: template_generation(context),
                 disabled=staff_details is None, use_container_width=True)
     col2.button("Go back", on_click=go_back, use_container_width=True)
