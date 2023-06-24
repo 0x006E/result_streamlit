@@ -57,15 +57,17 @@ def page_upload():
     def set_file_uploaded():
         st.session_state.uploaded_file = uploaded_file
         go_next()
-    st.title("Upload source result PDF file")
+
+    st.title("Welcome to Insightify")
     uploaded_file = st.file_uploader(
         "Upload a PDF file", type="pdf", key="upload")
 
     # Check if a file is uploaded
     if uploaded_file is not None:
         st.session_state.uploaded_file = uploaded_file
-    next_btn = st.button(
-        "Next", key="next", disabled=uploaded_file is None, on_click=set_file_uploaded)
+    col1, col2, col3 = st.columns(3)
+    next_btn = col2.button(
+        "Next", key="next", disabled=uploaded_file is None, on_click=set_file_uploaded, use_container_width=True)
 
 
 def page_display():
@@ -424,8 +426,8 @@ def report_generation():
         context = {
             'dept': dept,
             'year': year,
-            'staffadvisor1': staffadvisor1,
-            'staffadvisor2': staffadvisor2,
+            'staff_advisor1': staffadvisor1,
+            'staff_advisor2': staffadvisor2,
             'withheld': witheld,
             'appearedinall': appearedinall,
             'semester': semester,
