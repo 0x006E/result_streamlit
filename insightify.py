@@ -359,7 +359,8 @@ def report_generation():
         label="No. of students whose results published", min_value=0, step=1, value=(~df.isin(['Withheld', 'TBP'])).all(axis=1).sum())
     fullpass = col2.number_input(
         label="No. of students passed in all subjects", min_value=0, step=1, value=df['Full pass'].value_counts()[1])
-    fullpass_percentage = st.number_input(label="Pass percentage")
+    fullpass_percentage = st.number_input(label="Pass percentage", value=100*df['Full pass'].value_counts()[
+                                          1]/df['Full pass'].value_counts().sum())
     st.divider()
     staff_details = st.file_uploader(
         "Staff details", type="csv", key="upload")
@@ -400,8 +401,8 @@ def report_generation():
                 'num_reg': len(df.index),
                 'num_result': df[subject].count(),
                 'num_passed': df[subject].value_counts()[1],
-                'passwithfe': '{0:.2f}%'.format(100*pass_with_fe/total_without_withheld),
-                'passwithoutfe': '{0:.2f}%'.format(100*pass_without_fe/total_without_withheld)
+                'passwithfe': '{0:.2f}'.format(100*pass_with_fe/total_without_withheld),
+                'passwithoutfe': '{0:.2f}'.format(100*pass_without_fe/total_without_withheld)
             }
             subject_arr.append(sub)
         column_headers_dict = {
@@ -431,7 +432,7 @@ def report_generation():
             'date': date,
             'num_result_published': num_result_published,
             'fullpass': fullpass,
-            'fullpass_percentage': fullpass_percentage,
+            'fullpass_percentage': str(fullpass_percentage) + '%',
             'subjects': subject_arr,
         }
         valid_form = check_dictionary_values(context)
