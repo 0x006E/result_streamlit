@@ -13,7 +13,7 @@ from docxtpl import DocxTemplate
 import numpy as np
 import io
 
-st.set_page_config(layout="centered")
+st.set_page_config(layout="centered", page_title="Insightify")
 
 
 def invert_dict(d):
@@ -123,10 +123,6 @@ def page_result():
         st.session_state.page_index = 0
         st.session_state.uploaded_file = None
 
-    def on_submit():
-        st.session_state.scp = subject_state
-        go_next()
-
     st.title("We have some questions for you...")
     if "result" not in st.session_state:
         st.error("No result available yet.")
@@ -172,7 +168,11 @@ def page_result():
             subject_state[subject] = int(st.number_input(
                 f"Credit points for {subject } - {result['subjects'][subject]}", min_value=0, max_value=10, value=st.session_state.scp[subject], step=1, key=subject))
 
-        st.form_submit_button("View results", on_click=on_submit)
+        submitted = st.form_submit_button("View results",)
+    if submitted:
+        st.session_state.scp = subject_state
+        go_next()
+        st.experimental_rerun()
 
 
 def convert_df(df):
@@ -290,7 +290,6 @@ def page_display_table():
 
                             def generate_docx():
                                 st.session_state.filtered_df = filtered_df
-                                print(df)
                                 go_next()
                             col2.button("Generate report", on_click=generate_docx,
                                         key=f"generate-report-{branch}-{year}", use_container_width=True)
