@@ -387,8 +387,8 @@ def report_generation():
         for index, subject in enumerate(subjects):
             grades_with_fe = passed_grades + ["FE", "Absent"]
             grades_with_f = grades_with_fe + ['F']
-            pass_with_fe = df[subject].isin(passed_grades).sum()
-            pass_without_fe = df[subject].isin(grades_with_fe).sum()
+            pass_without_fe = df[subject].isin(passed_grades).sum()
+            pass_with_fe = df[subject].isin(grades_with_fe).sum()
             total_without_withheld = df[subject].isin(grades_with_f).sum()
             try:
                 facultyname = staff_details_df.loc[subject][name_col]
@@ -402,7 +402,7 @@ def report_generation():
                 'faculty': facultyname,
                 'num_reg': len(df.index),
                 'num_result': df[subject].count(),
-                'num_passed': df[subject].value_counts()[1],
+                'num_passed': pass_without_fe,
                 'passwithfe': '{0:.2f}'.format(100*pass_with_fe/total_without_withheld),
                 'passwithoutfe': '{0:.2f}'.format(100*pass_without_fe/total_without_withheld)
             }
