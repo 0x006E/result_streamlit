@@ -432,7 +432,7 @@ def report_generation():
             'date': date,
             'num_result_published': num_result_published,
             'fullpass': fullpass,
-            'fullpass_percentage': str(fullpass_percentage) + '%',
+            'fullpass_percentage': '{0:.2f}%'.format(fullpass_percentage),
             'subjects': subject_arr,
         }
         valid_form = check_dictionary_values(context)
