@@ -20,6 +20,13 @@ def invert_dict(d):
     return {value: key for key, value in d.items()}
 
 
+def check_dictionary_values(dictionary):
+    for key, value in dictionary.items():
+        if value is None or value == '':
+            return False
+    return True
+
+
 class log_viewer(logging.Handler):
     """ Class to redistribute python logging data """
 
@@ -357,6 +364,7 @@ def report_generation():
     staff_details = st.file_uploader(
         "Staff details", type="csv", key="upload")
     docx = ""
+    valid_form = False
     if staff_details is None:
         st.error("Upload staff details")
     else:
@@ -426,11 +434,13 @@ def report_generation():
             'fullpass_percentage': fullpass_percentage,
             'subjects': subject_arr,
         }
+        valid_form = check_dictionary_values(context)
         docx = template_generation(context)
-
+    if not valid_form:
+        st.error("Blank fields detected. All fields are required")
     col1, col2 = st.columns(2)
     col1.download_button("Generate", file_name=dept+str(year)+'.docx', data=docx,
-                         disabled=staff_details is None, use_container_width=True)
+                         disabled=staff_details is None or not valid_form, use_container_width=True)
     col2.button("Go back", on_click=go_back, use_container_width=True)
 
 
