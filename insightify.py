@@ -389,7 +389,7 @@ def report_generation():
             grades_with_f = grades_with_fe + ['F']
             pass_without_fe = df[subject].isin(passed_grades).sum()
             pass_with_fe = df[subject].isin(grades_with_fe).sum()
-            num_result = df[subject].isin(grades_with_f + ['Withheld']).sum()
+            num_result = df[subject].isin(grades_with_f).sum()
             total_without_withheld = df[subject].isin(grades_with_f).sum()
             try:
                 facultyname = staff_details_df.loc[subject][name_col]
