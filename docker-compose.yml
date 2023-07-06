@@ -8,6 +8,6 @@ services:
       - "5000:5000"
     networks:
       - npm-network
-network:
+networks:
   npm-network:
     external: true
