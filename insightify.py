@@ -12,6 +12,7 @@ from pdf_parser import parse_pdf
 from docxtpl import DocxTemplate
 import numpy as np
 import io
+import asyncio
 
 st.set_page_config(layout="centered", page_title="Insightify")
 
@@ -26,28 +27,46 @@ def check_dictionary_values(dictionary):
             return False
     return True
 
+async def parse_pdf_async( pages, final_data={}):
+    temp = NamedTemporaryFile(suffix=".pdf", delete=False)
+    temp.write(st.session_state.uploaded_file.getvalue())
+    result = parse_pdf(file_path=temp.name, pages=pages, final_data=final_data)
+    st.success("Processing complete!")
+    st.session_state.result = result
+    os.remove(temp.name)
+    temp.close()
+    next_btn = st.button(
+        "Next", key="next", use_container_width=True, on_click=go_next)
+    return result
+
 
 class log_viewer(logging.Handler):
     """ Class to redistribute python logging data """
-
     # have a class member to store the existing logger
     logger_instance = logging.getLogger("camelot")
-    logger = logging.getLogger()
-    st_instance = st.empty()
+    logger = logging.getLogger('pdf_parser')
 
-    def __init__(self, st_instance=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Initialize the Handler
         logging.Handler.__init__(self, *args)
-        st_instance = st_instance or st.empty()
+        self.st_container=st.container()
+        self.st_container.title("Processing uploaded PDF file")
+        self.st_container.write("")
+        self.st_instance=self.st_container.empty()
+        self.logger.handlers.clear()
         self.logger_instance.handlers.clear()
+        formatter = logging.Formatter('%(name)s - %(message)s')
+        self.setFormatter(formatter)
+
+        self.logger.setLevel("INFO")
+        self.logger_instance.setLevel("INFO")
         self.logger_instance.addHandler(self)
         self.logger.addHandler(self)
 
     def emit(self, record):
         """ Overload of logging.Handler method """
         record = self.format(record)
-        self.st_instance.write(record)
-
+        self.st_instance.markdown(f'<div style="text-align: center;font-size:1.5em">{record}</div>', unsafe_allow_html=True)
 
 def go_next():
     st.session_state.page_index += 1
@@ -74,19 +93,20 @@ def page_display():
     def go_back():
         st.session_state.page_index = 0
         st.session_state.uploaded_file = None
-
-    st.title("This is what you uploaded")
+    e=st.empty()
+    c=e.container()
+    c.title("This is what you uploaded")
 
     if "uploaded_file" not in st.session_state or st.session_state.uploaded_file is None:
-        st.error("No file uploaded yet.")
-        st.stop()
+        c.error("No file uploaded yet.")
+        c.stop()
 
     # Extract text from the uploaded \PDF file
     uploaded_file = st.session_state.uploaded_file
     reader = PdfReader(st.session_state.uploaded_file)
     num_pages = len(reader.pages)
-    st.write(f"The PDF contains {num_pages} pages.")
-    col1, col2 = st.columns(2)
+    c.write(f"The PDF contains {num_pages} pages.")
+    col1, col2 = c.columns(2)
     st.session_state.start_page = col1.number_input(
         "Start page", min_value=1, max_value=num_pages, step=1)
     st.session_state.end_page = col2.number_input(
@@ -96,36 +116,32 @@ def page_display():
     pdf_bytes = uploaded_file.getvalue()
 
     # Embed the PDF file using the ID
-    st.write("Here is the uploaded PDF file:")
-    st.write(
+    c.write("Here is the uploaded PDF file:")
+    c.write(
         f'<iframe src="data:application/pdf;base64,{base64.b64encode(pdf_bytes).decode()}"  width="700" height="1000" type="application/pdf">', unsafe_allow_html=True)
 
     # Additional information about the PDF
-    st.write(f"The PDF contains {num_pages} pages.")
-    col1, col2 = st.columns(2)
+    c.write(f"The PDF contains {num_pages} pages.")
+    col1, col2 = c.columns(2)
     prev_btn = col1.button("Go back", key="prev",
                            disabled=uploaded_file is None, use_container_width=True, on_click=go_back)
+    def next_page():
+        e.empty()
+        go_next()
     next_btn = col2.button(
-        "Next", key="next", disabled=prev_btn, use_container_width=True, on_click=go_next)
+        "Next", key="next2", disabled=prev_btn, use_container_width=True, on_click=next_page)
 
+    
+def empty_page():
+    st.write("")
+    go_next()
 
 def process_page():
-    st.title("Processing the Uploaded PDF File")
-    code_block = st.empty()
     start_page = st.session_state.start_page
     end_page = st.session_state.end_page
-    with st.spinner("Processing the uploaded PDF file..."):
-        temp = NamedTemporaryFile(suffix=".pdf", delete=False)
-        temp.write(st.session_state.uploaded_file.getvalue())
-        log_viewer(st_instance=code_block)
-        st.session_state.result = parse_pdf(
-            temp.name, pages=f"{start_page}-{end_page}", final_data={})
-        temp.close()
-        os.remove(temp.name)
-    st.success("Processing complete!")
-    next_btn = st.button(
-        "Next", key="next", use_container_width=True, on_click=go_next)
-
+    log_viewer()
+    asyncio.run(parse_pdf_async(pages=f"{start_page}-{end_page}", final_data={}))
+    
 
 def page_result():
     def go_back():
@@ -456,6 +472,7 @@ if "page_index" not in st.session_state:
 pages = {
     0: page_upload,
     1: page_display,
+    3: empty_page,
     2: process_page,
     3: page_result,
     4: page_display_table,
