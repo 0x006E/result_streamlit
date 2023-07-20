@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "insightify"
+version = "0.1.0"
+description = "A simple result analysis report generator"
+authors = ["Nithin S Varrier <nithin486@hotmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+streamlit = "*"
+pdf_parser = {git = "https://github.com/0x006e/pdf_parser.git"}
+docxtpl = "*"
+plotly = "*"
+
+[tool.poetry.group.dev.dependencies]
+pyoxidizer = "*"
+pre-commit = "*"
+streamlit = "*"
+pdf_parser = {git = "https://github.com/0x006e/pdf_parser.git"}
+docxtpl = "*"
+plotly = "*"
+black = "22.6.0"
+
+[tool.poetry.scripts]
+insightify = "insightify.__main__:app"
+
+[tool.isort]
+multi_line_output = 3
+line_length = 88
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

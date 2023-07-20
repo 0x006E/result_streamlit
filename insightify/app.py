@@ -13,6 +13,10 @@ from docxtpl import DocxTemplate
 import numpy as np
 import io
 import asyncio
+import pathlib
+
+HERE = pathlib.Path(__file__).parent
+
 
 st.set_page_config(layout="centered", page_title="Insightify")
 
@@ -33,8 +37,11 @@ async def parse_pdf_async( pages, final_data={}):
     result = parse_pdf(file_path=temp.name, pages=pages, final_data=final_data)
     st.success("Processing complete!")
     st.session_state.result = result
-    os.remove(temp.name)
     temp.close()
+    try:
+        os.remove(temp.name)
+    except:
+        st.warning("Could not delete temporary file")
     next_btn = st.button(
         "Next", key="next", use_container_width=True, on_click=go_next)
     return result
@@ -340,7 +347,7 @@ def page_display_table():
 
 
 def template_generation(context):
-    doc = DocxTemplate("template.docx")
+    doc = DocxTemplate(str(HERE.joinpath("template.docx")))
     doc.render(context)
     file_stream = io.BytesIO()
     doc.save(file_stream)
